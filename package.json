@@ -1,5 +1,6 @@
 {
   "name": "fetch-dogs",
+  "proxy": "https://frontend-take-home-service.fetch.com",
   "version": "0.1.0",
   "private": true,
   "dependencies": {

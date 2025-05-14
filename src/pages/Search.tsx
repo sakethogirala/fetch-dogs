@@ -1,5 +1,5 @@
 import { JSX, useEffect, useState, useCallback } from 'react'
-import {Box, Select, Button, SimpleGrid, Image,Heading, Text, Flex,} from '@chakra-ui/react'
+import {Box, Select, Button, SimpleGrid, Image, Heading, Text, Flex,} from '@chakra-ui/react'
 import api from '../api'
 // import { J } from 'framer-motion/dist/types.d-CQt5spQA'
 
@@ -28,17 +28,35 @@ export default function Search() : JSX.Element {
     // fetch dogs whenever filter or sort order changes
 
     const fetchDogs = useCallback(async (cursor?: string) => {
-        const params: any = { sort: `breed:${sortOrder}`, size: 10, from: cursor }
-        if (selectedBreed) {
-            params.breeds = [selectedBreed]
-        }
-        
-        const searchRes = await api.get<{resultIds: string[], total: number, next: string | null, prev: string | null}>('/dogs/search', { params })
-        setNextCursor(searchRes.data.next)
-        setPrevCursor(searchRes.data.prev)
-        const dogRes = await api.post<Dog[]>('/dogs', searchRes.data.resultIds)
-        setDogs(dogRes.data)
-    }, [selectedBreed, sortOrder])
+        // if the API gave you a full path, call it directly:
+    const searchRes = cursor
+    ? await api.get<{
+        resultIds: string[]
+        total: number
+        next: string|null
+        prev: string|null
+    }>(cursor)
+    : await api.get<{
+        resultIds: string[]
+        total: number
+        next: string|null
+        prev: string|null
+    }>('/dogs/search', {
+        params: {
+            sort: `breed:${sortOrder}`,
+            size: 10,
+            ...(selectedBreed ? { breeds: [selectedBreed] } : {}),
+        },
+    })
+
+  // update pagination cursors
+    setNextCursor(searchRes.data.next)
+    setPrevCursor(searchRes.data.prev)
+
+  // fetch full Dog objects
+    const dogRes = await api.post<Dog[]>('/dogs', searchRes.data.resultIds)
+    setDogs(dogRes.data)
+}, [selectedBreed, sortOrder])
 
     useEffect(() => {fetchDogs()}, [fetchDogs])
 
@@ -106,24 +124,31 @@ export default function Search() : JSX.Element {
                 overflow="hidden"
                 position="relative"
                 >
-                <Image src={dog.img} alt={dog.name} w="100%" h="200px" objectFit="cover" />
+                <Image
+                    src={dog.img}
+                    alt={dog.name}
+                    boxSize="200px"
+                    objectFit="cover"
+                    fallbackSrc="https://via.placeholder.com/200?text=No+Photo"
+                />
                 <Box p="4">
                     <Heading size="sm">{dog.name}</Heading>
                     <Text fontSize="sm">{dog.breed}</Text>
                     <Text fontSize="sm">Age: {dog.age}</Text>
                     <Text fontSize="sm">ZIP: {dog.zip_code}</Text>
+                    <Button
+                        size="sm"
+                        variant="ghost"
+                        position="absolute"
+                        bottom="2"
+                        right="2"
+                        colorScheme={favorites.has(dog.id) ? 'red' : 'gray'}
+                        onClick={() => toggleFavorite(dog.id)}
+                        >
+                        {favorites.has(dog.id) ? '❤️' : '♡'}
+                    </Button>
                 </Box>
-                <Button
-                    size="sm"
-                    variant="ghost"
-                    position="absolute"
-                    top="2"
-                    right="2"
-                    colorScheme={favorites.has(dog.id) ? 'red' : 'gray'}
-                    onClick={() => toggleFavorite(dog.id)}
-                >
-                    {favorites.has(dog.id) ? '❤️' : '♡'}
-                </Button>
+
                 </Box>
             ))}
             </SimpleGrid>
